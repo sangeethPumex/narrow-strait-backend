@@ -20,7 +20,7 @@ const AGENT_REGISTRY: Record<string, any> = {
 
 const generateResponsesStep = createStep({
   id: 'generate-responses',
-  description: 'Generate responses from multiple SimCo board agents',
+  description: 'Generate responses from multiple Narrow Striat board agents',
   inputSchema: z.object({
     agentIds: z.string().describe('Comma-separated agent IDs, e.g. cto-marcus,cfo-priya,coo-james'),
     prompt: z.string().describe('The scenario or question for the agents')

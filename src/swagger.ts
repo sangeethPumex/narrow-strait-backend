@@ -5,7 +5,7 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'SimCo Slack-Like Backend API',
+      title: 'Narrow Strait Slack-Like Backend API',
       version: '1.0.0',
       description: 'API for SimCo - A Slack-like backend with AI agents and vector search',
     },

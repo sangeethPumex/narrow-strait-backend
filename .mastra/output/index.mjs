@@ -4,8 +4,8 @@ import { createWorkflow, createStep } from '@mastra/core/workflows';
 import z$1, { z, ZodObject } from 'zod';
 import { Agent, MessageList, isSupportedLanguageModel, tryGenerateWithJsonFallback, tryStreamWithJsonFallback } from '@mastra/core/agent';
 import { createOllama } from 'ollama-ai-provider';
-import { channelContextTool } from './tools/7494b129-4556-4e7b-84d8-196ba67a7829.mjs';
-import { vectorSearchTool } from './tools/da35e1c2-5009-491c-9855-99643af95f08.mjs';
+import { channelContextTool } from './tools/963733b7-9d71-43c1-9a0e-8a448ea61ca6.mjs';
+import { vectorSearchTool } from './tools/38174556-42b1-4c7c-bfc0-16ee0ebecce7.mjs';
 import { readdir, readFile, mkdtemp, rm, writeFile, mkdir, copyFile, stat } from 'fs/promises';
 import * as https from 'https';
 import { join, resolve as resolve$2, dirname, extname, basename, isAbsolute, relative } from 'path';
@@ -61,9 +61,14 @@ are still being made manually or poorly.`,
 
 function buildOllamaModel$5() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const ctoMarcus = new Agent({
   id: "cto-marcus",
@@ -130,18 +135,19 @@ Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
 Current status: ${COMPANY_PROFILE.customers.pilot} pilots, ${COMPANY_PROFILE.customers.paying} paying customers, team of ${COMPANY_PROFILE.teamSize}
   `,
-  model: buildOllamaModel$5(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$5()
 });
 
 function buildOllamaModel$4() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const cfoPriya = new Agent({
   id: "cfo-priya",
@@ -151,7 +157,7 @@ const cfoPriya = new Agent({
 You are Priya Patel, CFO of ${COMPANY_PROFILE.name}. You are 32 years old, originally from Pune, 
 India, and did your MBA at Wharton after 6 years at Goldman Sachs. You've seen two startups 
 flame out from runway mismanagement \u2014 one of which you were part of \u2014 and that experience 
-permanently shaped how you think. You joined SimCo at Series A specifically because you 
+permanently shaped how you think. You joined Narrow Strait at Series A specifically because you 
 believed in disciplined growth, not growth-at-all-costs.
 
 ## Your Personality
@@ -194,18 +200,19 @@ ${COMPANY_PROFILE.whatWeDo}
 Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel$4(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$4()
 });
 
 function buildOllamaModel$3() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const cooJames = new Agent({
   id: "coo-james",
@@ -268,18 +275,19 @@ Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
 Current status: ${COMPANY_PROFILE.customers.pilot} pilot customers, ${COMPANY_PROFILE.customers.paying} paying \u2014 target: ${COMPANY_PROFILE.customers.target}
   `,
-  model: buildOllamaModel$3(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$3()
 });
 
 function buildOllamaModel$2() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const legalCounsel = new Agent({
   id: "legal-counsel",
@@ -315,18 +323,19 @@ ${COMPANY_PROFILE.whatWeDo}
 Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel$2(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$2()
 });
 
 function buildOllamaModel$1() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const competitorMonitor = new Agent({
   id: "competitor-monitor",
@@ -360,18 +369,19 @@ You speak from the outside in.
 ${COMPANY_PROFILE.whatWeDo}
 SimCo's edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel$1(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$1()
 });
 
 function buildOllamaModel() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const wildcardChaos = new Agent({
   id: "wildcard-chaos",
@@ -406,14 +416,10 @@ ${COMPANY_PROFILE.whatWeDo}
 Current bets: ${COMPANY_PROFILE.differentiator}
 Exposure: Heavy dependency on AWS ecosystem, ${COMPANY_PROFILE.competitors.join(", ")} all well-funded
   `,
-  model: buildOllamaModel(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel()
 });
 
-const AGENT_REGISTRY = {
+const AGENT_REGISTRY$1 = {
   "cto-marcus": ctoMarcus,
   "cfo-priya": cfoPriya,
   "coo-james": cooJames,
@@ -423,7 +429,7 @@ const AGENT_REGISTRY = {
 };
 const generateResponsesStep = createStep({
   id: "generate-responses",
-  description: "Generate responses from multiple SimCo board agents",
+  description: "Generate responses from multiple Narrow Striat board agents",
   inputSchema: z.object({
     agentIds: z.string().describe("Comma-separated agent IDs, e.g. cto-marcus,cfo-priya,coo-james"),
     prompt: z.string().describe("The scenario or question for the agents")
@@ -435,7 +441,7 @@ const generateResponsesStep = createStep({
     const agentIdList = inputData.agentIds.split(",").map((id) => id.trim()).filter(Boolean);
     const lines = [];
     for (const agentId of agentIdList) {
-      const agent = AGENT_REGISTRY[agentId];
+      const agent = AGENT_REGISTRY$1[agentId];
       if (!agent) {
         lines.push(`[${agentId}]: Agent not found.`);
         continue;
@@ -462,6 +468,110 @@ const discussionWorkflow = createWorkflow({
   })
 }).then(generateResponsesStep).commit();
 
+const AGENT_REGISTRY = {
+  "cto-marcus": ctoMarcus,
+  "cfo-priya": cfoPriya,
+  "coo-james": cooJames,
+  "legal-counsel": legalCounsel,
+  "competitor-monitor": competitorMonitor,
+  "wildcard-chaos": wildcardChaos
+};
+function normalizeRounds(rounds) {
+  if (typeof rounds !== "number" || Number.isNaN(rounds) || !Number.isFinite(rounds)) return 2;
+  return Math.max(1, Math.floor(rounds));
+}
+async function runConversationalDiscussion(input, turnGenerator) {
+  const rounds = normalizeRounds(input.rounds);
+  const threadHistory = [];
+  for (let roundNumber = 1; roundNumber <= rounds; roundNumber += 1) {
+    for (const agentId of input.agentIds) {
+      const message = await turnGenerator({
+        agentId,
+        scenario: input.scenario,
+        channelId: input.channelId,
+        rounds,
+        roundNumber,
+        threadHistory: [...threadHistory]
+      });
+      threadHistory.push(message);
+    }
+  }
+  return threadHistory;
+}
+const conversationalDiscussionStep = createStep({
+  id: "run-conversational-discussion",
+  description: "Runs a sequential multi-round board discussion",
+  inputSchema: z.object({
+    agentIds: z.array(z.string()).min(1),
+    scenario: z.object({
+      title: z.string(),
+      description: z.string()
+    }),
+    channelId: z.string(),
+    rounds: z.number().int().positive().default(2)
+  }),
+  outputSchema: z.object({
+    messages: z.array(
+      z.object({
+        agentId: z.string(),
+        agentName: z.string(),
+        content: z.string()
+      })
+    )
+  }),
+  execute: async ({ inputData }) => {
+    const messages = await runConversationalDiscussion(
+      {
+        agentIds: inputData.agentIds,
+        scenario: inputData.scenario,
+        channelId: inputData.channelId,
+        rounds: inputData.rounds
+      },
+      async ({ agentId, scenario, threadHistory }) => {
+        const agent = AGENT_REGISTRY[agentId];
+        if (!agent) {
+          return { agentId, agentName: agentId, content: "Agent not found." };
+        }
+        const historyText = threadHistory.length > 0 ? threadHistory.map((m) => `${m.agentName}: ${m.content}`).join("\n\n") : "No previous responses yet.";
+        const prompt = `## Scenario
+${scenario.title}: ${scenario.description}
+
+## Thread History
+${historyText}`;
+        const result = await agent.generateLegacy(prompt);
+        return {
+          agentId,
+          agentName: agent.name ?? agentId,
+          content: result.text ?? ""
+        };
+      }
+    );
+    return { messages };
+  }
+});
+const conversationalDiscussionWorkflow = createWorkflow({
+  id: "conversational-discussion",
+  description: "Sequential round-robin discussion where agents react to thread history",
+  inputSchema: z.object({
+    agentIds: z.array(z.string()).min(1),
+    scenario: z.object({
+      title: z.string(),
+      description: z.string()
+    }),
+    channelId: z.string(),
+    rounds: z.number().int().positive().default(2)
+  }),
+  outputSchema: z.object({
+    messages: z.array(
+      z.object({
+        agentId: z.string(),
+        agentName: z.string(),
+        content: z.string()
+      })
+    )
+  })
+}).then(conversationalDiscussionStep).commit();
+
 const mastra = new Mastra({
   agents: {
     "cto-marcus": ctoMarcus,
@@ -472,7 +582,8 @@ const mastra = new Mastra({
     "wildcard-chaos": wildcardChaos
   },
   workflows: {
-    discussionWorkflow
+    discussionWorkflow,
+    conversationalDiscussionWorkflow
   },
   tools: {
     vectorSearchTool,

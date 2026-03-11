@@ -147,5 +147,15 @@ export const messageController = {
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
+  },
+
+  async cleanChannel(req: Request, res: Response) {
+    try {
+      const { channelId } = req.params;
+      const result = await messageService.cleanGarbageMessages(channelId);
+      res.json({ deleted: result.deletedCount });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
   }
 };

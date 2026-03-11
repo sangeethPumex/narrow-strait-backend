@@ -1,4 +1,4 @@
-import { messageModalCRUD } from '../modals/message.modal.js';
+import { MessageModal, messageModalCRUD } from '../modals/message.modal.js';
 import { channelModalCRUD } from '../modals/channel.modal.js';
 import { embedWithOllama } from '../utils/vector.utils.js';
 import { z } from 'zod';
@@ -45,5 +45,13 @@ export const messageService = {
 
   async addReaction(messageId: string, emoji: string, userId: string) {
     return messageModalCRUD.addReaction(messageId, emoji, userId);
+  },
+
+  async cleanGarbageMessages(channelId: string) {
+    return MessageModal.deleteMany({
+      channelId,
+      isAgentMessage: true,
+      content: { $regex: /\{"type":"function"/ }
+    });
   }
 };

@@ -5,9 +5,14 @@ import { vectorSearchTool, channelContextTool } from '../tools/index.js';
 
 function buildOllamaModel() {
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-  const modelName = process.env.OLLAMA_MODEL || 'phi4-mini';
+  const modelName = process.env.OLLAMA_MODEL || 'llama3.2:1b';
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  } as any);
 }
 
 export const legalCounsel = new Agent({
@@ -44,9 +49,5 @@ ${COMPANY_PROFILE.whatWeDo}
 Competitors: ${COMPANY_PROFILE.competitors.join(', ')}
 Your edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel()
 });

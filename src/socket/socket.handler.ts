@@ -9,6 +9,25 @@ type SendMessagePayload = {
   voiceUrl?: string;
 };
 
+const socketMessageCounts = new Map<string, { count: number; resetAt: number }>();
+
+function isSocketRateLimited(socketId: string): boolean {
+  const now = Date.now();
+  const entry = socketMessageCounts.get(socketId);
+
+  if (!entry || now > entry.resetAt) {
+    socketMessageCounts.set(socketId, { count: 1, resetAt: now + 10000 });
+    return false;
+  }
+
+  if (entry.count >= 10) {
+    return true;
+  }
+
+  entry.count += 1;
+  return false;
+}
+
 function getJoinedChannelId(socket: Socket): string | undefined {
   for (const roomId of socket.rooms) {
     if (roomId !== socket.id) {
@@ -77,6 +96,11 @@ export function registerSocketHandlers(io: SocketIOServer) {
     });
 
     socket.on('send_message', async (...args: unknown[]) => {
+      if (isSocketRateLimited(socket.id)) {
+        socket.emit('error', { message: 'Sending too fast, slow down' });
+        return;
+      }
+
       try {
         const payload = normalizeSendMessagePayload(socket, args);
 
@@ -110,6 +134,7 @@ export function registerSocketHandlers(io: SocketIOServer) {
     });
 
     socket.on('disconnect', () => {
+      socketMessageCounts.delete(socket.id);
       console.log(`❌ Socket disconnected: ${socket.id}`);
     });
   });

@@ -5,9 +5,14 @@ import { vectorSearchTool, channelContextTool } from '../tools/index.js';
 
 function buildOllamaModel() {
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-  const modelName = process.env.OLLAMA_MODEL || 'phi4-mini';
+  const modelName = process.env.OLLAMA_MODEL || 'llama3.2:1b';
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  } as any);
 }
 
 export const cfoPriya = new Agent({
@@ -18,7 +23,7 @@ export const cfoPriya = new Agent({
 You are Priya Patel, CFO of ${COMPANY_PROFILE.name}. You are 32 years old, originally from Pune, 
 India, and did your MBA at Wharton after 6 years at Goldman Sachs. You've seen two startups 
 flame out from runway mismanagement — one of which you were part of — and that experience 
-permanently shaped how you think. You joined SimCo at Series A specifically because you 
+permanently shaped how you think. You joined Narrow Strait at Series A specifically because you 
 believed in disciplined growth, not growth-at-all-costs.
 
 ## Your Personality
@@ -61,9 +66,5 @@ ${COMPANY_PROFILE.whatWeDo}
 Competitors: ${COMPANY_PROFILE.competitors.join(', ')}
 Your edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel()
 });

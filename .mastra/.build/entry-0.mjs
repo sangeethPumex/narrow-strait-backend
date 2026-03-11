@@ -54,68 +54,16 @@ red line for the next round structure.`
 };
 
 "use strict";
-const vectorSearchTool = createTool({
-  id: "vector-search",
-  description: "Search similar messages in a channel using embeddings",
-  inputSchema: z.object({
-    channelId: z.string(),
-    query: z.string(),
-    limit: z.number().default(5),
-    threshold: z.number().default(0.7)
-  }),
-  execute: async ({ channelId, limit }) => {
-    try {
-      const { MessageModal } = await Promise.resolve().then(function () { return message_modal; });
-      const messages = await MessageModal.find({
-        channelId,
-        vectorEmbedding: { $ne: [], $exists: true }
-      }).sort({ timestamp: -1 }).limit(limit).lean();
-      return { success: true, messages };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-});
-
-"use strict";
-const channelContextTool = createTool({
-  id: "channel-context",
-  description: "Get recent messages and context from a channel",
-  inputSchema: z.object({
-    channelId: z.string(),
-    limit: z.number().default(10)
-  }),
-  execute: async ({ channelId, limit }) => {
-    try {
-      const { MessageModal } = await Promise.resolve().then(function () { return message_modal; });
-      const { ChannelModal } = await Promise.resolve().then(function () { return channel_modal; });
-      const channel = await ChannelModal.findById(channelId);
-      const messages = await MessageModal.find({ channelId }).sort({ timestamp: -1 }).limit(limit).lean();
-      return {
-        success: true,
-        channel: {
-          name: channel?.name,
-          members: channel?.members.map((m) => m.name)
-        },
-        messages: messages.map((m) => ({
-          author: m.authorName,
-          content: m.content
-        }))
-      };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-});
-
-"use strict";
-
-"use strict";
 function buildOllamaModel$6() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const ctoMarcus = new Agent({
   id: "cto-marcus",
@@ -182,19 +130,20 @@ Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
 Current status: ${COMPANY_PROFILE.customers.pilot} pilots, ${COMPANY_PROFILE.customers.paying} paying customers, team of ${COMPANY_PROFILE.teamSize}
   `,
-  model: buildOllamaModel$6(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$6()
 });
 
 "use strict";
 function buildOllamaModel$5() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const cfoPriya = new Agent({
   id: "cfo-priya",
@@ -247,19 +196,20 @@ ${COMPANY_PROFILE.whatWeDo}
 Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel$5(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$5()
 });
 
 "use strict";
 function buildOllamaModel$4() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const cooJames = new Agent({
   id: "coo-james",
@@ -322,19 +272,20 @@ Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
 Current status: ${COMPANY_PROFILE.customers.pilot} pilot customers, ${COMPANY_PROFILE.customers.paying} paying \u2014 target: ${COMPANY_PROFILE.customers.target}
   `,
-  model: buildOllamaModel$4(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$4()
 });
 
 "use strict";
 function buildOllamaModel$3() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const legalCounsel = new Agent({
   id: "legal-counsel",
@@ -370,19 +321,20 @@ ${COMPANY_PROFILE.whatWeDo}
 Competitors: ${COMPANY_PROFILE.competitors.join(", ")}
 Your edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel$3(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$3()
 });
 
 "use strict";
 function buildOllamaModel$2() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const competitorMonitor = new Agent({
   id: "competitor-monitor",
@@ -416,19 +368,20 @@ You speak from the outside in.
 ${COMPANY_PROFILE.whatWeDo}
 SimCo's edge: ${COMPANY_PROFILE.differentiator}
   `,
-  model: buildOllamaModel$2(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$2()
 });
 
 "use strict";
 function buildOllamaModel$1() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 const wildcardChaos = new Agent({
   id: "wildcard-chaos",
@@ -463,11 +416,7 @@ ${COMPANY_PROFILE.whatWeDo}
 Current bets: ${COMPANY_PROFILE.differentiator}
 Exposure: Heavy dependency on AWS ecosystem, ${COMPANY_PROFILE.competitors.join(", ")} all well-funded
   `,
-  model: buildOllamaModel$1(),
-  tools: {
-    vectorSearch: vectorSearchTool,
-    channelContext: channelContextTool
-  }
+  model: buildOllamaModel$1()
 });
 
 "use strict";
@@ -547,9 +496,14 @@ function getAgentConfig$1(agentId) {
 }
 function buildOllamaModel() {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.OLLAMA_MODEL || "phi4-mini";
+  const modelName = process.env.OLLAMA_MODEL || "llama3.2:1b";
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
-  return ollamaProvider(modelName);
+  return ollamaProvider(modelName, {
+    numCtx: 1024,
+    numPredict: 150,
+    temperature: 0.7,
+    repeatPenalty: 1.1
+  });
 }
 function createBoardAgents() {
   const model = buildOllamaModel();
@@ -595,7 +549,64 @@ function getAgentInstance$1(agentId) {
 "use strict";
 
 "use strict";
-const AGENT_REGISTRY = {
+const vectorSearchTool = createTool({
+  id: "vector-search",
+  description: "Search similar messages in a channel using embeddings",
+  inputSchema: z.object({
+    channelId: z.string(),
+    query: z.string(),
+    limit: z.number().default(5),
+    threshold: z.number().default(0.7)
+  }),
+  execute: async ({ channelId, limit }) => {
+    try {
+      const { MessageModal } = await Promise.resolve().then(function () { return message_modal; });
+      const messages = await MessageModal.find({
+        channelId,
+        vectorEmbedding: { $ne: [], $exists: true }
+      }).sort({ timestamp: -1 }).limit(limit).lean();
+      return { success: true, messages };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+});
+
+"use strict";
+const channelContextTool = createTool({
+  id: "channel-context",
+  description: "Get recent messages and context from a channel",
+  inputSchema: z.object({
+    channelId: z.string(),
+    limit: z.number().default(10)
+  }),
+  execute: async ({ channelId, limit }) => {
+    try {
+      const { MessageModal } = await Promise.resolve().then(function () { return message_modal; });
+      const { ChannelModal } = await Promise.resolve().then(function () { return channel_modal; });
+      const channel = await ChannelModal.findById(channelId);
+      const messages = await MessageModal.find({ channelId }).sort({ timestamp: -1 }).limit(limit).lean();
+      return {
+        success: true,
+        channel: {
+          name: channel?.name,
+          members: channel?.members.map((m) => m.name)
+        },
+        messages: messages.map((m) => ({
+          author: m.authorName,
+          content: m.content
+        }))
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+});
+
+"use strict";
+
+"use strict";
+const AGENT_REGISTRY$1 = {
   "cto-marcus": ctoMarcus,
   "cfo-priya": cfoPriya,
   "coo-james": cooJames,
@@ -617,7 +628,7 @@ const generateResponsesStep = createStep({
     const agentIdList = inputData.agentIds.split(",").map((id) => id.trim()).filter(Boolean);
     const lines = [];
     for (const agentId of agentIdList) {
-      const agent = AGENT_REGISTRY[agentId];
+      const agent = AGENT_REGISTRY$1[agentId];
       if (!agent) {
         lines.push(`[${agentId}]: Agent not found.`);
         continue;
@@ -645,6 +656,111 @@ const discussionWorkflow = createWorkflow({
 }).then(generateResponsesStep).commit();
 
 "use strict";
+const AGENT_REGISTRY = {
+  "cto-marcus": ctoMarcus,
+  "cfo-priya": cfoPriya,
+  "coo-james": cooJames,
+  "legal-counsel": legalCounsel,
+  "competitor-monitor": competitorMonitor,
+  "wildcard-chaos": wildcardChaos
+};
+function normalizeRounds(rounds) {
+  if (typeof rounds !== "number" || Number.isNaN(rounds) || !Number.isFinite(rounds)) return 2;
+  return Math.max(1, Math.floor(rounds));
+}
+async function runConversationalDiscussion(input, turnGenerator) {
+  const rounds = normalizeRounds(input.rounds);
+  const threadHistory = [];
+  for (let roundNumber = 1; roundNumber <= rounds; roundNumber += 1) {
+    for (const agentId of input.agentIds) {
+      const message = await turnGenerator({
+        agentId,
+        scenario: input.scenario,
+        channelId: input.channelId,
+        rounds,
+        roundNumber,
+        threadHistory: [...threadHistory]
+      });
+      threadHistory.push(message);
+    }
+  }
+  return threadHistory;
+}
+const conversationalDiscussionStep = createStep({
+  id: "run-conversational-discussion",
+  description: "Runs a sequential multi-round board discussion",
+  inputSchema: z.object({
+    agentIds: z.array(z.string()).min(1),
+    scenario: z.object({
+      title: z.string(),
+      description: z.string()
+    }),
+    channelId: z.string(),
+    rounds: z.number().int().positive().default(2)
+  }),
+  outputSchema: z.object({
+    messages: z.array(
+      z.object({
+        agentId: z.string(),
+        agentName: z.string(),
+        content: z.string()
+      })
+    )
+  }),
+  execute: async ({ inputData }) => {
+    const messages = await runConversationalDiscussion(
+      {
+        agentIds: inputData.agentIds,
+        scenario: inputData.scenario,
+        channelId: inputData.channelId,
+        rounds: inputData.rounds
+      },
+      async ({ agentId, scenario, threadHistory }) => {
+        const agent = AGENT_REGISTRY[agentId];
+        if (!agent) {
+          return { agentId, agentName: agentId, content: "Agent not found." };
+        }
+        const historyText = threadHistory.length > 0 ? threadHistory.map((m) => `${m.agentName}: ${m.content}`).join("\n\n") : "No previous responses yet.";
+        const prompt = `## Scenario
+${scenario.title}: ${scenario.description}
+
+## Thread History
+${historyText}`;
+        const result = await agent.generateLegacy(prompt);
+        return {
+          agentId,
+          agentName: agent.name ?? agentId,
+          content: result.text ?? ""
+        };
+      }
+    );
+    return { messages };
+  }
+});
+const conversationalDiscussionWorkflow = createWorkflow({
+  id: "conversational-discussion",
+  description: "Sequential round-robin discussion where agents react to thread history",
+  inputSchema: z.object({
+    agentIds: z.array(z.string()).min(1),
+    scenario: z.object({
+      title: z.string(),
+      description: z.string()
+    }),
+    channelId: z.string(),
+    rounds: z.number().int().positive().default(2)
+  }),
+  outputSchema: z.object({
+    messages: z.array(
+      z.object({
+        agentId: z.string(),
+        agentName: z.string(),
+        content: z.string()
+      })
+    )
+  })
+}).then(conversationalDiscussionStep).commit();
+
+"use strict";
 const mastra = new Mastra({
   agents: {
     "cto-marcus": ctoMarcus,
@@ -655,7 +771,8 @@ const mastra = new Mastra({
     "wildcard-chaos": wildcardChaos
   },
   workflows: {
-    discussionWorkflow
+    discussionWorkflow,
+    conversationalDiscussionWorkflow
   },
   tools: {
     vectorSearchTool,
@@ -795,6 +912,24 @@ const messageModalCRUD = {
   async findByChannel(channelId, limit = 50, offset = 0) {
     return MessageModal.find({ channelId }).sort({ timestamp: -1 }).skip(offset).limit(limit).lean();
   },
+  async countByChannel(channelId) {
+    return MessageModal.countDocuments({ channelId });
+  },
+  async findByChannelDateRange(channelId, startDate, endDate) {
+    return MessageModal.find({
+      channelId,
+      timestamp: { $gte: startDate, $lte: endDate }
+    }).sort({ timestamp: 1 }).lean();
+  },
+  async findEligibleForSummary(channelId, olderThan, weekStart) {
+    return MessageModal.find({
+      channelId,
+      $and: [{ timestamp: { $lt: olderThan } }, { timestamp: { $lt: weekStart } }]
+    }).sort({ timestamp: 1 }).lean();
+  },
+  async deleteManyByIds(ids) {
+    return MessageModal.deleteMany({ _id: { $in: ids } });
+  },
   async addReaction(messageId, emoji, userId) {
     const msg = await MessageModal.findById(messageId);
     if (!msg) throw new Error("Message not found");
@@ -871,6 +1006,13 @@ const channelModalCRUD = {
       { new: true }
     );
   },
+  async syncMessageStats(channelId, messageCount, lastMessageAt) {
+    return ChannelModal.findByIdAndUpdate(
+      channelId,
+      { messageCount, lastMessageAt },
+      { new: true }
+    );
+  },
   async addVectorMemory(channelId, month, summary, keyDecisions, embedding) {
     return ChannelModal.findByIdAndUpdate(
       channelId,
@@ -886,4 +1028,4 @@ var channel_modal = /*#__PURE__*/Object.freeze({
   channelModalCRUD: channelModalCRUD
 });
 
-export { channelContextTool, discussionWorkflow, getAgentConfig, getAgentInstance, getAgentResponse, getMultiAgentResponses, mastra, vectorSearchTool };
+export { channelContextTool, conversationalDiscussionWorkflow, discussionWorkflow, getAgentConfig, getAgentInstance, getAgentResponse, getMultiAgentResponses, mastra, vectorSearchTool };
