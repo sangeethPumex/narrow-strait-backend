@@ -11,6 +11,13 @@ export interface Channel {
     joinedAt: Date;
   }>;
   messageCount: number;
+  stats: {
+    totalMessages: number;
+    agentMessages: number;
+    userMessages: number;
+    lastAgentAt?: Date;
+    lastUserAt?: Date;
+  };
   lastMessageAt?: Date;
   vectorMemory: Array<{
     month: number;

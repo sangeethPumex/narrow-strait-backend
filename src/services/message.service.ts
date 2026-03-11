@@ -1,5 +1,6 @@
 import { MessageModal, messageModalCRUD } from '../modals/message.modal.js';
-import { channelModalCRUD } from '../modals/channel.modal.js';
+import { ChannelModal } from '../modals/channel.modal.js';
+import { messageVectorCRUD } from '../modals/message-vector.modal.js';
 import { embedWithOllama } from '../utils/vector.utils.js';
 import { z } from 'zod';
 
@@ -29,18 +30,52 @@ export const messageService = {
       parsedData.content.includes('?') ||
       parsedData.contentType === 'system';
 
-    const vectorEmbedding = shouldEmbed ? await embedWithOllama(parsedData.content) : [];
     const message = await messageModalCRUD.create({
       ...parsedData,
-      vectorEmbedding,
       timestamp: new Date()
     });
-    await channelModalCRUD.updateMessageCount(parsedData.channelId);
+
+    if (shouldEmbed && process.env.ENABLE_EMBEDDINGS === 'true') {
+      embedWithOllama(parsedData.content)
+        .then(embedding => {
+          if (embedding.length > 0) {
+            return messageVectorCRUD.create(
+              message._id.toString(),
+              parsedData.channelId,
+              embedding
+            );
+          }
+        })
+        .catch(err => console.warn('Embedding save failed:', err.message));
+    }
+
+    await ChannelModal.findByIdAndUpdate(parsedData.channelId, {
+      $inc: {
+        messageCount: 1,
+        'stats.totalMessages': 1,
+        ...(parsedData.isAgentMessage
+          ? { 'stats.agentMessages': 1 }
+          : { 'stats.userMessages': 1 })
+      },
+      ...(parsedData.isAgentMessage
+        ? { 'stats.lastAgentAt': new Date() }
+        : { 'stats.lastUserAt': new Date() }),
+      lastMessageAt: new Date()
+    });
+
     return message;
   },
 
   async getChannelMessages(channelId: string, limit = 50, offset = 0) {
     return messageModalCRUD.findByChannel(channelId, limit, offset);
+  },
+
+  async getChannelMessagesLean(channelId: string, limit = 20) {
+    return MessageModal.find({ channelId })
+      .select('authorName content timestamp isAgentMessage authorRole')
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .lean();
   },
 
   async addReaction(messageId: string, emoji: string, userId: string) {

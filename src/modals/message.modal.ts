@@ -26,7 +26,6 @@ const schema = new Schema<MessageDoc>(
       confidence: { type: Number, min: 0, max: 1 },
       certainty: String
     },
-    vectorEmbedding: [Number],
     reactions: [{ emoji: String, users: [String] }],
     mentionedAgents: [String],
     linkedScenarioId: String,
@@ -37,6 +36,20 @@ const schema = new Schema<MessageDoc>(
 
 schema.index({ channelId: 1, timestamp: -1 });
 schema.index({ authorId: 1, channelId: 1 });
+schema.index(
+  { timestamp: 1 },
+  {
+    expireAfterSeconds: parseInt(process.env.MESSAGE_TTL_DAYS || '30') * 86400,
+    partialFilterExpression: { isAgentMessage: false }
+  }
+);
+schema.index(
+  { timestamp: 1 },
+  {
+    expireAfterSeconds: parseInt(process.env.AGENT_MESSAGE_TTL_DAYS || '90') * 86400,
+    partialFilterExpression: { isAgentMessage: true }
+  }
+);
 
 export const MessageModal = model<MessageDoc>('Message', schema);
 
@@ -86,12 +99,5 @@ export const messageModalCRUD = {
       msg.reactions.push({ emoji, users: [userId] });
     }
     return msg.save();
-  },
-  async updateVector(messageId: string, embedding: number[]) {
-    return MessageModal.findByIdAndUpdate(
-      messageId,
-      { vectorEmbedding: embedding },
-      { new: true }
-    );
   }
 };

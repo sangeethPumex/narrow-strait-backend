@@ -1,17 +1,48 @@
 export async function embedWithOllama(text: string): Promise<number[]> {
+  // Skip if embeddings are disabled
+  if (process.env.ENABLE_EMBEDDINGS !== 'true') {
+    return [];
+  }
+
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-  const model = process.env.OLLAMA_EMBED_MODEL || 'llama3.2:1b';
+  // Uses dedicated embedding model, NOT the chat model
+  const model = process.env.OLLAMA_EMBED_MODEL || 'all-minilm';
+
   try {
     const response = await fetch(`${baseUrl}/api/embeddings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt: text })
+      body: JSON.stringify({ model, prompt: text }),
+      signal: AbortSignal.timeout(10000)
     });
-    if (!response.ok) return [];
+
+    if (!response.ok) {
+      console.error(
+        `❌ Embedding failed [${model}]: ${response.status} ${response.statusText}`
+      );
+      return [];
+    }
+
     const data = (await response.json()) as { embedding?: number[] };
-    return data.embedding || [];
+
+    if (!data.embedding || data.embedding.length === 0) {
+      console.error(
+        `❌ Empty embedding returned — is ${model} installed? Run: ollama pull ${model}`
+      );
+      return [];
+    }
+
+    console.log(
+      `✅ [${model}] embedded "${text.slice(0, 40)}..." → ${data.embedding.length} dims`
+    );
+    return data.embedding;
   } catch (error) {
-    console.error('Embedding error:', error);
+    const err = error as Error;
+    if (err.name === 'TimeoutError') {
+      console.error(`❌ Embedding timed out for model ${model}`);
+    } else {
+      console.error(`❌ Embedding error [${model}]:`, err.message);
+    }
     return [];
   }
 }

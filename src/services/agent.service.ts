@@ -1,4 +1,4 @@
-import { getMultiAgentResponses, getAgentConfig } from '../mastra/index.js';
+import { getMultiAgentResponses, getAgentConfig, getAgentResponse } from '../mastra/index.js';
 import { getAgentInstance } from '../mastra/index.js';
 import { messageService } from './message.service.js';
 import { channelService } from './channel.service.js';
@@ -25,7 +25,8 @@ export const agentService = {
     const targetAgentIds =
       agentIds || channel.members.filter(m => m.id !== 'user').map(m => m.id);
 
-    const { recentMessages, summaries } = await summaryService.getChannelContext(channelId);
+    const { summaries } = await summaryService.getChannelContext(channelId);
+    const recentMessages = await messageService.getChannelMessagesLean(channelId, 20);
 
     const recentContext = recentMessages
       .map(m => `${m.authorName}: ${m.content}`)
@@ -108,25 +109,10 @@ export const agentService = {
     const targetAgentIds =
       agentIds || channel.members.filter(m => m.id !== 'user').map(m => m.id);
 
-    const recentMessages = await messageService.getChannelMessages(channelId, 5);
-    const context = recentMessages
-      .map(m => `${m.authorName}: ${m.content}`)
-      .join('\n');
-
     // Fetch live company state (creates default if none exists)
     const companyState = await companyStateCRUD.getOrCreateDefault();
 
     const createdMessages: Awaited<ReturnType<typeof messageService.createMessage>>[] = [];
-
-    const renderThreadHistory = (threadHistory: ConversationalMessage[]) => {
-      if (threadHistory.length === 0) {
-        return 'No prior agent responses yet.';
-      }
-
-      return threadHistory
-        .map((message, index) => `${index + 1}. ${message.agentName}: ${message.content}`)
-        .join('\n\n');
-    };
 
     await runConversationalDiscussion(
       {
@@ -142,10 +128,15 @@ export const agentService = {
         const agent = getAgentInstance(agentId);
         if (!agent) throw new Error(`Agent ${agentId} not found`);
 
-        const basePrompt = buildAgentPrompt('', scenario, companyState, context);
-        const prompt = `${basePrompt}\n\n## Thread History\n${renderThreadHistory(threadHistory)}`;
-        const response = await agent.generateLegacy(prompt);
-        const content = response.text ?? '';
+        const basePrompt = buildAgentPrompt('', scenario, companyState, '');
+        const threadSection = threadHistory.length > 0
+          ? `\n## What Your Colleagues Have Said So Far\n${threadHistory
+              .map(t => `[${t.agentName}]: ${t.content}`)
+              .join('\n\n')}\n\nNow respond in character. React to what your colleagues said above.\nDo NOT repeat what they already said. Add your own perspective.`
+          : '\nYou are the first to respond. Set the tone for this discussion.';
+
+        const fullPrompt = basePrompt + threadSection;
+        const content = await getAgentResponse(agentId, fullPrompt);
 
         const message = await messageService.createMessage({
           channelId,
@@ -178,6 +169,9 @@ export const agentService = {
         }
 
         createdMessages.push(message);
+
+        // After each agent responds, wait 500ms before next call
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         return {
           agentId,

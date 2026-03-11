@@ -5,6 +5,7 @@ import { vectorSearchTool, channelContextTool } from '../tools/index.js';
 
 function buildOllamaModel() {
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  // Explicitly use OLLAMA_MODEL (chat) never OLLAMA_EMBED_MODEL
   const modelName = process.env.OLLAMA_MODEL || 'llama3.2:1b';
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
   return ollamaProvider(modelName, {

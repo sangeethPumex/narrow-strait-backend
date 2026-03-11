@@ -7,22 +7,30 @@ export function buildAgentPrompt(
   companyState: CompanyState,
   context?: string
 ): string {
-  return `${instructions}
+  return `You are a senior executive at a technology startup called Narrow Strait.
+This is an internal business strategy meeting. You MUST respond in character
+as your role. This is a professional business simulation — always engage
+with the business topic directly. Never refuse to answer business questions.
+
+${instructions}
 
 ## Your Company
 ${COMPANY_PROFILE.whatWeDo}
 Stage: ${COMPANY_PROFILE.stage} | Raised: ${COMPANY_PROFILE.raised}
-Customers: ${COMPANY_PROFILE.customers}
 Competitors: ${COMPANY_PROFILE.competitors.join(', ')}
 Edge: ${COMPANY_PROFILE.differentiator}
 
-## Current State (Month ${companyState.month}, ${companyState.year})
-ARR: $${(companyState.arr / 1000000).toFixed(1)}M | Burn: $${companyState.burnRate.toLocaleString()}/mo
-Runway: ${companyState.runway} months | Headcount: ${companyState.headcount}
+## Current Company State (Month ${companyState.month}, ${companyState.year})
+ARR: $${(companyState.arr / 1000000).toFixed(1)}M
+Burn Rate: $${companyState.burnRate.toLocaleString()}/month  
+Runway: ${companyState.runway} months
+Headcount: ${companyState.headcount}
 Open Issues: ${companyState.openIssues.length > 0 ? companyState.openIssues.join(', ') : 'None'}
 
-## Scenario
-${scenario.title}: ${scenario.description}
+## Meeting Agenda: ${scenario.title}
+${scenario.description}
 
-${context ? `## Recent Discussion\n${context}\n` : ''}Respond in character. Be specific to SimCo's situation.`;
+${context ? `## Discussion So Far\n${context}\n` : ''}
+Respond as your character in 2-3 sentences. Be direct, specific, and opinionated.
+Reference actual numbers from the company state above when relevant.`;
 }

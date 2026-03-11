@@ -15,9 +15,9 @@ import {
   validateMessage,
   validateDiscussion,
   validateVectorSearch,
-  requireOllama,
-  checkOllama
+  requireOllama
 } from './middleware/index.js';
+import { checkOllama, checkEmbedModel } from './middleware/ollama-health.middleware.js';
 
 const app = express();
 
@@ -80,14 +80,33 @@ app.get('/api/channels/:channelId/context', summaryController.getChannelContext)
 
 // Health
 app.get('/api/health', async (_req: Request, res: Response) => {
-  const ollamaOk = await checkOllama();
+  const chatModelOk = await checkOllama();
+  const embedModelOk = await checkEmbedModel();
+  const embeddingsEnabled = process.env.ENABLE_EMBEDDINGS === 'true';
+
+  const allOk = chatModelOk && (!embeddingsEnabled || embedModelOk);
+
   res.json({
-    status: ollamaOk ? 'ok' : 'degraded',
+    status: allOk ? 'ok' : 'degraded',
     timestamp: new Date(),
+    models: {
+      chat: {
+        model: process.env.OLLAMA_MODEL || 'llama3.2:1b',
+        status: chatModelOk ? 'ready' : 'unavailable',
+        purpose: 'agent discussions and responses'
+      },
+      embedding: {
+        model: process.env.OLLAMA_EMBED_MODEL || 'all-minilm',
+        status: embeddingsEnabled
+          ? (embedModelOk ? 'ready' : 'unavailable — run: ollama pull all-minilm')
+          : 'disabled',
+        purpose: 'vector search and message embeddings'
+      }
+    },
     services: {
       api: 'running',
       mastra: 'ready',
-      ollama: ollamaOk ? 'running' : 'unavailable'
+      ollama: chatModelOk ? 'running' : 'unavailable'
     }
   });
 });

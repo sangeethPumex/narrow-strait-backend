@@ -96,8 +96,46 @@ async function initializeChannels() {
   }
 }
 
+async function checkModels() {
+  const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const chatModel = process.env.OLLAMA_MODEL || 'llama3.2:1b';
+  const embedModel = process.env.OLLAMA_EMBED_MODEL || 'all-minilm';
+  const embeddingsEnabled = process.env.ENABLE_EMBEDDINGS === 'true';
+
+  console.log('🔍 Checking Ollama models...');
+
+  try {
+    const res = await fetch(`${baseUrl}/api/tags`);
+    const data = (await res.json()) as { models: { name: string }[] };
+    const available = data.models.map(m => m.name);
+
+    const chatOk = available.some(n => n.startsWith(chatModel.split(':')[0]));
+    const embedOk = available.some(n => n.startsWith(embedModel.split(':')[0]));
+
+    console.log(`  Chat model    [${chatModel}]: ${chatOk ? '✅ ready' : '❌ NOT FOUND — run: ollama pull ' + chatModel}`);
+
+    if (embeddingsEnabled) {
+      console.log(`  Embed model   [${embedModel}]: ${embedOk ? '✅ ready' : '❌ NOT FOUND — run: ollama pull ' + embedModel}`);
+    } else {
+      console.log(`  Embed model   [${embedModel}]: ⏸️  disabled (ENABLE_EMBEDDINGS=false)`);
+    }
+
+    if (!chatOk) {
+      console.error('❌ Chat model not available — agents will not work');
+    }
+    if (embeddingsEnabled && !embedOk) {
+      console.warn('⚠️ Embed model not available — vector search will return empty results');
+      console.warn(`   Fix: ollama pull ${embedModel}`);
+    }
+  } catch (error) {
+    console.error('❌ Could not connect to Ollama:', (error as Error).message);
+    console.error('   Fix: make sure Ollama is running — ollama serve');
+  }
+}
+
 async function startServer() {
   await connectDB();
+  await checkModels();
   await initializeChannels();
 
   httpServer.listen(PORT, () => {

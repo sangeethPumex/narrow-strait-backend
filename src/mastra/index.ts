@@ -41,16 +41,19 @@ export async function getMultiAgentResponses(
   prompt: string
 ): Promise<Record<string, string>> {
   const responses: Record<string, string> = {};
-  await Promise.all(
-    agentIds.map(async agentId => {
-      try {
-        responses[agentId] = await getAgentResponse(agentId, prompt);
-      } catch (error) {
-        console.error(`Failed for ${agentId}:`, error);
-        responses[agentId] = '';
-      }
-    })
-  );
+
+  // Sequential — not parallel — Ollama handles one request at a time
+  for (const agentId of agentIds) {
+    try {
+      responses[agentId] = await getAgentResponse(agentId, prompt);
+      // Small breathing room between calls
+      await new Promise(resolve => setTimeout(resolve, 300));
+    } catch (error) {
+      console.error(`Failed for ${agentId}:`, error);
+      responses[agentId] = '';
+    }
+  }
+
   return responses;
 }
 

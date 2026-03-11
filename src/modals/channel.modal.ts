@@ -18,6 +18,13 @@ const schema = new Schema<ChannelDoc>(
       }
     ],
     messageCount: { type: Number, default: 0 },
+    stats: {
+      totalMessages: { type: Number, default: 0 },
+      agentMessages: { type: Number, default: 0 },
+      userMessages: { type: Number, default: 0 },
+      lastAgentAt: Date,
+      lastUserAt: Date
+    },
     lastMessageAt: Date,
     vectorMemory: [
       {

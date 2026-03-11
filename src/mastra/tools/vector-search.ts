@@ -12,14 +12,18 @@ export const vectorSearchTool = createTool({
   }),
   execute: async ({ channelId, limit }: { channelId: string; limit: number; query: string; threshold: number }) => {
     try {
+      const { MessageVectorModal } = await import('../../modals/message-vector.modal.js');
       const { MessageModal } = await import('../../modals/message.modal.js');
-      const messages = await MessageModal.find({
-        channelId,
-        vectorEmbedding: { $ne: [], $exists: true }
-      })
-        .sort({ timestamp: -1 })
+
+      const vectors = await MessageVectorModal.find({ channelId })
+        .sort({ createdAt: -1 })
         .limit(limit)
         .lean();
+
+      const messages = await MessageModal.find({
+        _id: { $in: vectors.map(v => v.messageId) }
+      }).lean();
+
       return { success: true, messages };
     } catch (error) {
       return { success: false, error: (error as Error).message };
