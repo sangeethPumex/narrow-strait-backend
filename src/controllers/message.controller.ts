@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { ZodError } from 'zod';
 import { messageService } from '../services/message.service.js';
 
 export const messageController = {
@@ -32,17 +33,27 @@ export const messageController = {
     try {
       const { channelId } = req.params;
       const { content, contentType } = req.body;
+      const now = new Date();
+
       const message = await messageService.createMessage({
         channelId,
         content,
-        contentType: contentType || 'text',
+        contentType,
         authorId: 'user',
         authorName: 'You',
-        month: 1,
-        year: 1
+        month: now.getMonth() + 1,
+        year: now.getFullYear()
       });
       res.status(201).json(message);
     } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({
+          error: 'Invalid message payload',
+          details: error.issues.map(issue => issue.message)
+        });
+        return;
+      }
+
       res.status(500).json({ error: (error as Error).message });
     }
   },

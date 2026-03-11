@@ -54,6 +54,28 @@ export const messageModalCRUD = {
       .limit(limit)
       .lean();
   },
+  async countByChannel(channelId: string) {
+    return MessageModal.countDocuments({ channelId });
+  },
+  async findByChannelDateRange(channelId: string, startDate: Date, endDate: Date) {
+    return MessageModal.find({
+      channelId,
+      timestamp: { $gte: startDate, $lte: endDate }
+    })
+      .sort({ timestamp: 1 })
+      .lean();
+  },
+  async findEligibleForSummary(channelId: string, olderThan: Date, weekStart: Date) {
+    return MessageModal.find({
+      channelId,
+      $and: [{ timestamp: { $lt: olderThan } }, { timestamp: { $lt: weekStart } }]
+    })
+      .sort({ timestamp: 1 })
+      .lean();
+  },
+  async deleteManyByIds(ids: string[]) {
+    return MessageModal.deleteMany({ _id: { $in: ids } });
+  },
   async addReaction(messageId: string, emoji: string, userId: string) {
     const msg = await MessageModal.findById(messageId);
     if (!msg) throw new Error('Message not found');

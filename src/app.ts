@@ -6,6 +6,7 @@ import { messageController } from './controllers/message.controller.js';
 import { channelController } from './controllers/channel.controller.js';
 import { agentController } from './controllers/agent.controller.js';
 import { vectorController } from './controllers/vector.controller.js';
+import { summaryController } from './controllers/summary.controller.js';
 
 const app = express();
 
@@ -37,9 +38,14 @@ app.post('/api/messages/:messageId/reactions', messageController.reactToMessage)
 
 // Agents
 app.post('/api/channels/:channelId/trigger-discussion', agentController.startDiscussion);
+app.post('/api/channels/:channelId/trigger-conversation', agentController.startConversationalDiscussion);
 
 // Vector
 app.post('/api/channels/:channelId/vector-search', vectorController.findSimilarMessages);
+
+// Summaries
+app.post('/api/channels/:channelId/summarize', summaryController.summarizeChannel);
+app.get('/api/channels/:channelId/context', summaryController.getChannelContext);
 
 // Health
 app.get('/api/health', (_req: Request, res: Response) => {

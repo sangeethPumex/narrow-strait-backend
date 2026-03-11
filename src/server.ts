@@ -4,6 +4,8 @@ import mongoose from 'mongoose';
 import 'dotenv/config';
 import app from './app.js';
 import { channelService } from './services/channel.service.js';
+import { setIO } from './socket/io.js';
+import { registerSocketHandlers } from './socket/socket.handler.js';
 
 const PORT = process.env.PORT || 3001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/simco-slack';
@@ -13,6 +15,8 @@ const httpServer = http.createServer(app);
 const io = new SocketIOServer(httpServer, {
   cors: { origin: FRONTEND_URL, credentials: true }
 });
+setIO(io);
+registerSocketHandlers(io);
 
 async function connectDB() {
   try {
@@ -91,28 +95,6 @@ async function initializeChannels() {
     console.error('Channel init error:', error);
   }
 }
-
-io.on('connection', socket => {
-  console.log(`✅ Socket connected: ${socket.id}`);
-
-  socket.on('join_channel', (channelId: string) => {
-    socket.join(channelId);
-    io.to(channelId).emit('user_joined', { userId: socket.id });
-  });
-
-  socket.on('send_message', (data: { channelId: string; content: string }) => {
-    io.to(data.channelId).emit('message_posted', {
-      authorId: 'user',
-      authorName: 'You',
-      content: data.content,
-      timestamp: new Date()
-    });
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`❌ Socket disconnected: ${socket.id}`);
-  });
-});
 
 async function startServer() {
   await connectDB();

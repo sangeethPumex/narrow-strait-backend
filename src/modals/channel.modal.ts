@@ -54,6 +54,13 @@ export const channelModalCRUD = {
       { new: true }
     );
   },
+  async syncMessageStats(channelId: string, messageCount: number, lastMessageAt?: Date) {
+    return ChannelModal.findByIdAndUpdate(
+      channelId,
+      { messageCount, lastMessageAt },
+      { new: true }
+    );
+  },
   async addVectorMemory(
     channelId: string,
     month: number,

@@ -9,6 +9,7 @@ import {
 } from './agents/index.js';
 import { vectorSearchTool, channelContextTool } from './tools/index.js';
 import { discussionWorkflow } from './workflows/discussion.js';
+import { conversationalDiscussionWorkflow } from './workflows/conversational-discussion.js';
 
 export const mastra = new Mastra({
   agents: {
@@ -19,7 +20,7 @@ export const mastra = new Mastra({
     'competitor-monitor': competitorMonitor,
     'wildcard-chaos': wildcardChaos
   },
-  workflows: { discussionWorkflow },
+  workflows: { discussionWorkflow, conversationalDiscussionWorkflow },
   tools: { vectorSearchTool, channelContextTool }
 });
 
@@ -53,7 +54,12 @@ export async function getMultiAgentResponses(
   return responses;
 }
 
-export { vectorSearchTool, channelContextTool, discussionWorkflow };
+export {
+  vectorSearchTool,
+  channelContextTool,
+  discussionWorkflow,
+  conversationalDiscussionWorkflow
+};
 
 // Agent configurations for backward compatibility
 const agentConfigs = {

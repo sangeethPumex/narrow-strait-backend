@@ -66,5 +66,28 @@ export const agentController = {
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
+  },
+
+  async startConversationalDiscussion(req: Request, res: Response) {
+    try {
+      const { channelId } = req.params;
+      const { scenario, agentIds, rounds = 2, month, year } = req.body;
+      if (!scenario) {
+        return res.status(400).json({ error: 'Scenario required' });
+      }
+
+      const messages = await agentService.triggerConversationalDiscussion(
+        channelId,
+        scenario,
+        agentIds,
+        rounds,
+        month,
+        year
+      );
+
+      res.status(201).json({ messages, count: messages.length });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
   }
 };

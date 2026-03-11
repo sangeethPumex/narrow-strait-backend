@@ -1,30 +1,41 @@
 import { messageModalCRUD } from '../modals/message.modal.js';
 import { channelModalCRUD } from '../modals/channel.modal.js';
 import { embedWithOllama } from '../utils/vector.utils.js';
+import { z } from 'zod';
+
+const createMessageSchema = z.object({
+  channelId: z.string().trim().min(1, 'Channel ID is required'),
+  content: z.string().trim().min(1, 'Message content is required'),
+  contentType: z.enum(['text', 'voice', 'system']).default('text'),
+  voiceUrl: z.string().trim().min(1).optional(),
+  authorId: z.string().trim().min(1, 'Author ID is required'),
+  authorName: z.string().trim().min(1, 'Author name is required'),
+  authorRole: z.string().trim().min(1).optional(),
+  authorAvatar: z.string().trim().min(1).optional(),
+  authorColor: z.string().trim().min(1).optional(),
+  isAgentMessage: z.boolean().optional(),
+  month: z.number().int().min(1).max(12),
+  year: z.number().int().min(1),
+  mentionedAgents: z.array(z.string().trim().min(1)).optional()
+});
+
+export type CreateMessageInput = z.input<typeof createMessageSchema>;
 
 export const messageService = {
-  async createMessage(data: {
-    channelId: string;
-    content: string;
-    contentType?: 'text' | 'voice' | 'system';
-    voiceUrl?: string;
-    authorId: string;
-    authorName: string;
-    authorRole?: string;
-    authorAvatar?: string;
-    authorColor?: string;
-    isAgentMessage?: boolean;
-    month: number;
-    year: number;
-    mentionedAgents?: string[];
-  }) {
-    const vectorEmbedding = await embedWithOllama(data.content);
+  async createMessage(data: CreateMessageInput) {
+    const parsedData = createMessageSchema.parse(data);
+    const shouldEmbed =
+      parsedData.isAgentMessage === true ||
+      parsedData.content.includes('?') ||
+      parsedData.contentType === 'system';
+
+    const vectorEmbedding = shouldEmbed ? await embedWithOllama(parsedData.content) : [];
     const message = await messageModalCRUD.create({
-      ...data,
+      ...parsedData,
       vectorEmbedding,
       timestamp: new Date()
     });
-    await channelModalCRUD.updateMessageCount(data.channelId);
+    await channelModalCRUD.updateMessageCount(parsedData.channelId);
     return message;
   },
 
