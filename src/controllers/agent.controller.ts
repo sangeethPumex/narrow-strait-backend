@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { agentService } from '../services/agent.service.js';
+import { channelService } from '../services/channel.service.js';
+import { parseMentions, resolveRespondingAgents } from '../utils/mention.utils.js';
 
 export const agentController = {
   /**
@@ -83,6 +85,47 @@ export const agentController = {
         rounds,
         month,
         year
+      );
+
+      res.status(201).json({ messages, count: messages.length });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  },
+
+  async askAgent(req: Request, res: Response) {
+    try {
+      const { channelId } = req.params;
+      const { message, agentIds, month, year } = req.body;
+
+      if (!message) {
+        return res.status(400).json({ error: 'message is required' });
+      }
+
+      const channel = await channelService.getChannel(channelId);
+      if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+      const channelAgentIds = channel.members
+        .map((m: { id: string }) => m.id)
+        .filter((id: string) => id !== 'user' && id !== 'ceo-sarah');
+
+      const targetAgentIds =
+        agentIds || parseMentions(message) || resolveRespondingAgents(message, channelAgentIds);
+
+      if (targetAgentIds.length === 0) {
+        return res.status(400).json({
+          error: 'No agents resolved. Use @mention or provide agentIds.',
+          hint: 'Try: @marcus, @priya, @james, @alex, @market, @chaos, @all, @board'
+        });
+      }
+
+      const now = new Date();
+      const messages = await agentService.triggerDiscussion(
+        channelId,
+        { title: 'Direct Question', description: message },
+        targetAgentIds,
+        month || now.getMonth() + 1,
+        year || now.getFullYear()
       );
 
       res.status(201).json({ messages, count: messages.length });

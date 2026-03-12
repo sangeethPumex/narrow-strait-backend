@@ -64,6 +64,12 @@ app.post(
   validateDiscussion,
   agentController.startConversationalDiscussion
 );
+app.post(
+  '/api/channels/:channelId/ask',
+  agentLimiter,
+  requireOllama,
+  agentController.askAgent
+);
 
 // Vector
 app.post(

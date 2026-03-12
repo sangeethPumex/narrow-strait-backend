@@ -1,6 +1,11 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { ZodError } from 'zod';
 import { messageService } from '../services/message.service.js';
+import { resolveRespondingAgents } from '../utils/mention.utils.js';
+import { agentService } from '../services/agent.service.js';
+import { channelService } from '../services/channel.service.js';
+import { getAgentConfig } from '../mastra/index.js';
+import { getIO } from './io.js';
 
 type SendMessagePayload = {
   channelId?: string;
@@ -115,10 +120,52 @@ export function registerSocketHandlers(io: SocketIOServer) {
           year: new Date().getFullYear()
         });
 
-        // send to everyone else in the room
-        socket.to(message.channelId).emit('message_posted', message);
-        // confirm back to sender
-        socket.emit('message_posted', message);
+        // Echo to room (use io.to so sender also gets it)
+        io.to(message.channelId).emit('message_posted', message);
+
+        const channelId = message.channelId;
+        const content   = (payload.content ?? '').trim();
+
+        const channel = await channelService.getChannel(channelId);
+        if (channel) {
+          const channelAgentIds = channel.members
+            .map(m => m.id)
+            .filter(id => id !== 'user' && id !== 'ceo-sarah');
+
+          const respondingAgents = resolveRespondingAgents(content, channelAgentIds);
+
+          if (respondingAgents.length > 0) {
+            for (const agentId of respondingAgents) {
+              const cfg = getAgentConfig(agentId);
+              if (cfg) {
+                getIO().to(channelId).emit('agent_typing', {
+                  agentId,
+                  agentName: cfg.name,
+                  isTyping: true
+                });
+              }
+            }
+
+            const now = new Date();
+
+            // Fire and forget — responses stream in via socket inside triggerDiscussion
+            agentService
+              .triggerDiscussion(
+                channelId,
+                { title: 'Response', description: content },
+                respondingAgents,
+                now.getMonth() + 1,
+                now.getFullYear()
+              )
+              .catch(err => console.error('Auto-respond error:', err.message))
+              .finally(() => {
+                // Safety: clear all typing indicators when fully done
+                for (const agentId of respondingAgents) {
+                  io.to(channelId).emit('agent_typing', { agentId, isTyping: false });
+                }
+              });
+          }
+        }
       } catch (error) {
         console.error('send_message error:', error);
         const detail =

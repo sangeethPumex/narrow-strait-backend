@@ -1,4 +1,4 @@
-import { getMultiAgentResponses, getAgentConfig, getAgentResponse } from '../mastra/index.js';
+import { getAgentConfig, getAgentResponse } from '../mastra/index.js';
 import { getAgentInstance } from '../mastra/index.js';
 import { messageService } from './message.service.js';
 import { channelService } from './channel.service.js';
@@ -23,7 +23,11 @@ export const agentService = {
     if (!channel) throw new Error('Channel not found');
 
     const targetAgentIds =
-      agentIds || channel.members.filter(m => m.id !== 'user').map(m => m.id);
+      agentIds ||
+      channel.members
+        .filter(m => m.id !== 'user' && m.id !== 'ceo-sarah')
+        .map(m => m.id)
+        .filter(id => getAgentConfig(id));
 
     const { summaries } = await summaryService.getChannelContext(channelId);
     const recentMessages = await messageService.getChannelMessagesLean(channelId, 20);
@@ -45,51 +49,58 @@ export const agentService = {
       ? `## Historical Context (summarized)\n${summaryContext}\n\n## Live Messages\n${recentContext}`
       : recentContext;
 
-    // Fetch live company state (creates default if none exists)
     const companyState = await companyStateCRUD.getOrCreateDefault();
-
-    const prompt = buildAgentPrompt('', scenario, companyState, context);
-    const agentResponses = await getMultiAgentResponses(targetAgentIds, prompt);
 
     const createdMessages: Awaited<ReturnType<typeof messageService.createMessage>>[] = [];
     for (const agentId of targetAgentIds) {
-      const response = agentResponses[agentId];
-      if (!response) continue;
-
       const config = getAgentConfig(agentId);
       if (!config) continue;
 
-      const message = await messageService.createMessage({
-        channelId,
-        content: response,
-        authorId: agentId,
-        authorName: config.name,
-        authorRole: config.role,
-        authorAvatar: config.icon,
-        authorColor: config.color,
-        isAgentMessage: true,
-        month,
-        year
-      });
-
       try {
-        getIO().to(channelId).emit('message_posted', {
-          _id: message._id,
+        // Per-agent identity prompt — fixes identical response problem
+        const prompt = buildAgentPrompt(agentId, scenario, companyState, context);
+        const response = await getAgentResponse(agentId, prompt);
+
+        // Clear THIS agent's typing as soon as their message is ready
+        try {
+          getIO().to(channelId).emit('agent_typing', {
+            agentId,
+            agentName: config.name,
+            isTyping: false
+          });
+        } catch (_) {}
+
+        if (!response || response.trim() === '') continue;
+
+        const message = await messageService.createMessage({
+          channelId,
+          content: response,
           authorId: agentId,
           authorName: config.name,
           authorRole: config.role,
           authorAvatar: config.icon,
           authorColor: config.color,
-          content: response,
-          channelId,
           isAgentMessage: true,
-          timestamp: new Date()
+          month,
+          year
         });
-      } catch (e) {
-        console.warn('Socket emit skipped — io not ready');
-      }
 
-      createdMessages.push(message);
+        try {
+          getIO().to(channelId).emit('message_posted',
+            (message as any).toObject ? (message as any).toObject() : message
+          );
+        } catch (_) {}
+
+        createdMessages.push(message);
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+      } catch (err) {
+        // Always clear typing on error
+        try {
+          getIO().to(channelId).emit('agent_typing', { agentId, isTyping: false });
+        } catch (_) {}
+        console.error(`Agent ${agentId} failed:`, (err as Error).message);
+      }
     }
 
     return createdMessages;
@@ -107,9 +118,12 @@ export const agentService = {
     if (!channel) throw new Error('Channel not found');
 
     const targetAgentIds =
-      agentIds || channel.members.filter(m => m.id !== 'user').map(m => m.id);
+      agentIds ||
+      channel.members
+        .filter(m => m.id !== 'user' && m.id !== 'ceo-sarah')
+        .map(m => m.id)
+        .filter(id => getAgentConfig(id));
 
-    // Fetch live company state (creates default if none exists)
     const companyState = await companyStateCRUD.getOrCreateDefault();
 
     const createdMessages: Awaited<ReturnType<typeof messageService.createMessage>>[] = [];
@@ -128,15 +142,27 @@ export const agentService = {
         const agent = getAgentInstance(agentId);
         if (!agent) throw new Error(`Agent ${agentId} not found`);
 
-        const basePrompt = buildAgentPrompt('', scenario, companyState, '');
-        const threadSection = threadHistory.length > 0
-          ? `\n## What Your Colleagues Have Said So Far\n${threadHistory
-              .map(t => `[${t.agentName}]: ${t.content}`)
-              .join('\n\n')}\n\nNow respond in character. React to what your colleagues said above.\nDo NOT repeat what they already said. Add your own perspective.`
-          : '\nYou are the first to respond. Set the tone for this discussion.';
+        try {
+          getIO().to(channelId).emit('agent_typing', {
+            agentId,
+            agentName: config.name,
+            isTyping: true
+          });
+        } catch (_) {}
 
-        const fullPrompt = basePrompt + threadSection;
-        const content = await getAgentResponse(agentId, fullPrompt);
+        let content = '';
+        try {
+          const fullPrompt = buildAgentPrompt(agentId, scenario, companyState, '', threadHistory);
+          content = await getAgentResponse(agentId, fullPrompt);
+        } finally {
+          try {
+            getIO().to(channelId).emit('agent_typing', {
+              agentId,
+              agentName: config.name,
+              isTyping: false
+            });
+          } catch (_) {}
+        }
 
         const message = await messageService.createMessage({
           channelId,
@@ -152,18 +178,7 @@ export const agentService = {
         });
 
         try {
-          getIO().to(channelId).emit('message_posted', {
-            _id: message._id,
-            authorId: agentId,
-            authorName: config.name,
-            authorRole: config.role,
-            authorAvatar: config.icon,
-            authorColor: config.color,
-            content,
-            channelId,
-            isAgentMessage: true,
-            timestamp: new Date()
-          });
+          getIO().to(channelId).emit('message_posted', message.toObject ? message.toObject() : message);
         } catch (e) {
           console.warn('Socket emit skipped — io not ready');
         }
