@@ -15,6 +15,35 @@ const MENTION_MAP: Record<string, string> = {
   '@board':    '__board__',
 };
 
+// Natural name detection — no @ required
+// Order matters: longer/more specific patterns first
+const NATURAL_NAME_MAP: Array<{ patterns: string[]; agentId: string }> = [
+  {
+    patterns: ['marcus wei', 'marcus', 'cto'],
+    agentId: 'cto-marcus',
+  },
+  {
+    patterns: ['priya patel', 'priya'],
+    agentId: 'cfo-priya',
+  },
+  {
+    patterns: ['james park', 'james'],
+    agentId: 'coo-james',
+  },
+  {
+    patterns: ['alex rivera', 'alex', 'counsel', 'lawyer'],
+    agentId: 'legal-counsel',
+  },
+  {
+    patterns: ['market intel', 'market intelligence', 'competitor'],
+    agentId: 'competitor-monitor',
+  },
+  {
+    patterns: ['uncertainty agent', 'wildcard', 'chaos'],
+    agentId: 'wildcard-chaos',
+  },
+];
+
 export const BOARD_AGENTS = ['cto-marcus', 'cfo-priya', 'coo-james'];
 export const ALL_AGENTS   = [
   'cto-marcus', 'cfo-priya', 'coo-james',
@@ -24,46 +53,36 @@ export const ALL_AGENTS   = [
 // Cross-functional: topic matches 2 specific agents
 const CROSS_FUNCTIONAL: Array<{ keywords: string[]; agentIds: string[] }> = [
   {
-    // Infrastructure / cloud / tech decisions with cost implications
     keywords: ['aws', 'gcp', 'azure', 'cloud', 'switch', 'migrate', 'migration',
-      'move from', 'vs ', ' or ', 'replace', 'infrastructure', 'hosting'],
+               'infrastructure', 'hosting', 'server'],
     agentIds: ['cto-marcus', 'cfo-priya'],
   },
   {
-    // Hiring with financial impact
-    keywords: ['hire', 'hiring', 'headcount', 'recruit', 'salary', 'comp',
-      'compensation', 'equity', 'offer'],
+    keywords: ['hire', 'hiring', 'headcount', 'recruit', 'salary', 'offer letter',
+               'compensation', 'equity grant'],
     agentIds: ['coo-james', 'cfo-priya'],
   },
   {
-    // Fundraising / investors
-    keywords: ['series a', 'fundraise', 'raise', 'investor', 'term sheet',
-      'valuation', 'dilution', 'cap table'],
+    keywords: ['series a', 'fundraise', 'raise', 'investor', 'term sheet', 'valuation'],
     agentIds: ['cfo-priya', 'coo-james'],
   },
   {
-    // Product launch / go-live
-    keywords: ['launch', 'release', 'ship', 'go live', 'deploy to prod',
-      'production release'],
+    keywords: ['launch', 'release', 'ship', 'go live', 'deploy to prod'],
     agentIds: ['cto-marcus', 'coo-james'],
   },
   {
-    // People / team / culture decisions (including personal ones like "wife", "friend", "family")
-    keywords: ['wife', 'husband', 'friend', 'family', 'co-founder', 'partner',
-      'vp', 'director', 'manager', 'title', 'role', 'promote', 'promotion',
-      'fired', 'fire', 'let go', 'performance'],
-    agentIds: ['coo-james'],  // people decisions -> just James
+    keywords: ['wife', 'husband', 'friend', 'family', 'vp of', 'director of',
+               'promote', 'promotion', 'fire', 'fired', 'let go', 'performance pip'],
+    agentIds: ['coo-james'],
   },
   {
-    // Legal / compliance
-    keywords: ['legal', 'compliance', 'gdpr', 'contract', 'nda', 'ip',
-      'patent', 'regulation', 'liability', 'privacy', 'soc2'],
+    keywords: ['gdpr', 'compliance', 'contract', 'nda', 'ip', 'patent',
+               'regulation', 'liability', 'privacy', 'soc2'],
     agentIds: ['legal-counsel'],
   },
   {
-    // Market / competition
-    keywords: ['competitor', 'palantir', 'databricks', 'snowflake', 'tableau',
-      'market share', 'win', 'lose', 'deal lost', 'pricing'],
+    keywords: ['palantir', 'databricks', 'snowflake', 'tableau', 'competitor',
+               'market share', 'win rate', 'deal lost'],
     agentIds: ['competitor-monitor'],
   },
 ];
@@ -71,18 +90,19 @@ const CROSS_FUNCTIONAL: Array<{ keywords: string[]; agentIds: string[] }> = [
 // Single-domain strong signals -> 1 agent
 const SINGLE_DOMAIN: Array<{ keywords: string[]; agentId: string }> = [
   {
-    keywords: ['budget', 'runway', 'burn', 'arr', 'revenue', 'cash', 'finance',
-      'profit', 'margin', 'unit economics', 'cac', 'ltv'],
+    keywords: ['budget', 'runway', 'burn', 'arr', 'revenue', 'cash',
+               'margin', 'unit economics', 'cac', 'ltv', 'cost'],
     agentId: 'cfo-priya',
   },
   {
     keywords: ['technical', 'build', 'engineer', 'architect', 'code', 'stack',
-      'api', 'system', 'database', 'performance', 'latency', 'tech debt'],
+               'api', 'database', 'performance', 'latency', 'tech debt', 'bug'],
     agentId: 'cto-marcus',
   },
   {
-    keywords: ['customer', 'pilot', 'onboard', 'churn', 'client', 'deal',
-      'close', 'sales', 'pipeline', 'conversion'],
+    keywords: ['customer', 'clients', 'pilot', 'onboard', 'churn', 'client',
+               'deal', 'close', 'sales', 'pipeline', 'conversion', 'paying',
+               'accounts', 'who are our', 'current clients'],
     agentId: 'coo-james',
   },
 ];
@@ -90,19 +110,33 @@ const SINGLE_DOMAIN: Array<{ keywords: string[]; agentId: string }> = [
 // General board-level strategy -> all 3 board agents
 const BOARD_STRATEGY_KEYWORDS = [
   'strategy', 'roadmap', 'quarter', 'q1', 'q2', 'q3', 'q4',
-  'milestone', 'goal', 'objective', 'vision', 'mission', 'pivot',
-  'expand', 'new market', 'new vertical', 'series b',
+  'milestone', 'goal', 'objective', 'vision', 'pivot',
+  'expand', 'new market', 'new vertical',
 ];
 
 export function parseMentions(content: string): string[] | null {
   const lower = content.toLowerCase();
   const mentioned: string[] = [];
 
+  // 1. Check @mention aliases
   for (const [alias, agentId] of Object.entries(MENTION_MAP)) {
     if (lower.includes(alias)) {
       if (agentId === '__all__')   return [...ALL_AGENTS];
       if (agentId === '__board__') return [...BOARD_AGENTS];
       if (!mentioned.includes(agentId)) mentioned.push(agentId);
+    }
+  }
+  if (mentioned.length > 0) return mentioned;
+
+  // 2. Check natural name references (no @ needed)
+  for (const { patterns, agentId } of NATURAL_NAME_MAP) {
+    for (const pattern of patterns) {
+      // Match whole word or phrase — avoids partial matches
+      const regex = new RegExp(`\\b${pattern}\\b`, 'i');
+      if (regex.test(lower)) {
+        if (!mentioned.includes(agentId)) mentioned.push(agentId);
+        break; // found this agent, move to next
+      }
     }
   }
 

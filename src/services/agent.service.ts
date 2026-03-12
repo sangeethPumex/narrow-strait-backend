@@ -52,12 +52,15 @@ export const agentService = {
     const companyState = await companyStateCRUD.getOrCreateDefault();
 
     const createdMessages: Awaited<ReturnType<typeof messageService.createMessage>>[] = [];
+    const threadHistory: Array<{ agentName: string; content: string }> = [];
+
     for (const agentId of targetAgentIds) {
       const config = getAgentConfig(agentId);
       if (!config) continue;
 
       try {
-        const prompt = buildAgentPrompt(agentId, scenario, companyState, context);
+        // Pass what previous agents said so this agent can differ/disagree
+        const prompt = buildAgentPrompt(agentId, scenario, companyState, context, threadHistory);
 
         // Create placeholder message immediately - frontend shows it right away
         const placeholder = await messageService.createMessage({
@@ -139,6 +142,11 @@ export const agentService = {
         } catch (_) {}
 
         createdMessages.push(placeholder);
+
+        // Add to thread so next agent can react/disagree
+        if (finalContent && finalContent.trim()) {
+          threadHistory.push({ agentName: config.name, content: finalContent });
+        }
 
         // Small gap between agents
         const delay = 300 + Math.floor(Math.random() * 400);

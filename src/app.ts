@@ -97,7 +97,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
     timestamp: new Date(),
     models: {
       chat: {
-        model: process.env.OLLAMA_MODEL || 'llama3.2:1b',
+        model: process.env.OLLAMA_MODEL || 'hermes3:8b',
         status: chatModelOk ? 'ready' : 'unavailable',
         purpose: 'agent discussions and responses'
       },

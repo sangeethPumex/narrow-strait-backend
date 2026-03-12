@@ -98,7 +98,7 @@ async function initializeChannels() {
 
 async function checkModels() {
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-  const chatModel = process.env.OLLAMA_MODEL || 'llama3.2:1b';
+  const chatModel = process.env.OLLAMA_MODEL || 'hermes3:8b';
   const embedModel = process.env.OLLAMA_EMBED_MODEL || 'all-minilm';
   const embeddingsEnabled = process.env.ENABLE_EMBEDDINGS === 'true';
 

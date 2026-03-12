@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-const CHAT_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:1b';
+const CHAT_MODEL = process.env.OLLAMA_MODEL || 'hermes3:8b';
 const EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'all-minilm';
 
 let ollamaAvailable = true;

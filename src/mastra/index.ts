@@ -46,7 +46,7 @@ export async function streamAgentResponse(
   onChunk: (chunk: string, fullSoFar: string) => void
 ): Promise<string> {
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-  const model = process.env.OLLAMA_MODEL || 'llama3.2:1b';
+  const model = process.env.OLLAMA_MODEL || 'hermes3:8b';
 
   const response = await fetch(`${baseUrl}/api/generate`, {
     method: 'POST',
