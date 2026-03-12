@@ -36,6 +36,80 @@ export async function getAgentResponse(agentId: string, prompt: string): Promise
   }
 }
 
+/**
+ * Stream agent response token by token.
+ * Calls onChunk for each text chunk, returns the full assembled text.
+ */
+export async function streamAgentResponse(
+  agentId: string,
+  prompt: string,
+  onChunk: (chunk: string, fullSoFar: string) => void
+): Promise<string> {
+  const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const model = process.env.OLLAMA_MODEL || 'llama3.2:1b';
+
+  const response = await fetch(`${baseUrl}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      prompt,
+      stream: true,
+      options: {
+        num_predict: 120,
+        temperature: 0.75,
+        repeat_penalty: 1.1,
+      },
+    }),
+    signal: AbortSignal.timeout(parseInt(process.env.AGENT_TIMEOUT_MS || '90000')),
+  });
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Ollama stream failed: ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const json = JSON.parse(line) as { response?: string; done?: boolean };
+        if (json.response) {
+          fullText += json.response;
+          onChunk(json.response, fullText);
+        }
+      } catch {
+        // incomplete JSON chunk, skip
+      }
+    }
+  }
+
+  if (buffer.trim()) {
+    try {
+      const json = JSON.parse(buffer) as { response?: string };
+      if (json.response) {
+        fullText += json.response;
+        onChunk(json.response, fullText);
+      }
+    } catch {
+      // trailing partial json ignored
+    }
+  }
+
+  return fullText.trim();
+}
+
 export async function getMultiAgentResponses(
   agentIds: string[],
   prompt: string

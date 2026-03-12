@@ -121,7 +121,9 @@ export function registerSocketHandlers(io: SocketIOServer) {
         });
 
         // Echo to room (use io.to so sender also gets it)
-        io.to(message.channelId).emit('message_posted', message);
+        io.to(message.channelId).emit('message_posted',
+          (message as any).toObject ? (message as any).toObject() : message
+        );
 
         const channelId = message.channelId;
         const content   = (payload.content ?? '').trim();

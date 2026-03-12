@@ -1,4 +1,4 @@
-import { getAgentConfig, getAgentResponse } from '../mastra/index.js';
+import { getAgentConfig, getAgentResponse, streamAgentResponse } from '../mastra/index.js';
 import { getAgentInstance } from '../mastra/index.js';
 import { messageService } from './message.service.js';
 import { channelService } from './channel.service.js';
@@ -57,24 +57,12 @@ export const agentService = {
       if (!config) continue;
 
       try {
-        // Per-agent identity prompt — fixes identical response problem
         const prompt = buildAgentPrompt(agentId, scenario, companyState, context);
-        const response = await getAgentResponse(agentId, prompt);
 
-        // Clear THIS agent's typing as soon as their message is ready
-        try {
-          getIO().to(channelId).emit('agent_typing', {
-            agentId,
-            agentName: config.name,
-            isTyping: false
-          });
-        } catch (_) {}
-
-        if (!response || response.trim() === '') continue;
-
-        const message = await messageService.createMessage({
+        // Create placeholder message immediately - frontend shows it right away
+        const placeholder = await messageService.createMessage({
           channelId,
-          content: response,
+          content: '...',
           authorId: agentId,
           authorName: config.name,
           authorRole: config.role,
@@ -82,20 +70,81 @@ export const agentService = {
           authorColor: config.color,
           isAgentMessage: true,
           month,
-          year
+          year,
         });
 
+        const messageId = (placeholder as any)._id?.toString();
+
+        // Emit the placeholder so it appears in chat immediately
         try {
           getIO().to(channelId).emit('message_posted',
-            (message as any).toObject ? (message as any).toObject() : message
+            (placeholder as any).toObject ? (placeholder as any).toObject() : placeholder
           );
+          // Clear typing - message bubble is now visible
+          getIO().to(channelId).emit('agent_typing', {
+            agentId,
+            agentName: config.name,
+            isTyping: false,
+          });
         } catch (_) {}
 
-        createdMessages.push(message);
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Stream content in - emit each chunk so frontend updates live
+        let finalContent = '';
+        let lastEmitLength = 0;
+        const CHUNK_EMIT_THRESHOLD = 8;
+
+        try {
+          finalContent = await streamAgentResponse(agentId, prompt, (chunk, fullSoFar) => {
+            // Throttle emissions - don't emit every single token
+            if (fullSoFar.length - lastEmitLength >= CHUNK_EMIT_THRESHOLD || chunk.includes(' ')) {
+              lastEmitLength = fullSoFar.length;
+              try {
+                getIO().to(channelId).emit('message_update', {
+                  messageId,
+                  content: fullSoFar,
+                  agentId,
+                });
+              } catch (_) {}
+            }
+          });
+        } catch (streamErr) {
+          console.error(`Stream error for ${agentId}:`, (streamErr as Error).message);
+          // Fall back to non-streaming
+          finalContent = await getAgentResponse(agentId, prompt).catch(() => '');
+        }
+
+        if (!finalContent || finalContent.trim() === '') {
+          // Delete the placeholder if we got nothing
+          try {
+            const { MessageModal } = await import('../modals/message.modal.js');
+            await MessageModal.deleteOne({ _id: messageId });
+            getIO().to(channelId).emit('message_deleted', { messageId });
+          } catch (_) {}
+          continue;
+        }
+
+        // Save final content to DB
+        try {
+          const { MessageModal } = await import('../modals/message.modal.js');
+          await MessageModal.findByIdAndUpdate(messageId, { content: finalContent });
+        } catch (_) {}
+
+        // Emit finalized message so frontend replaces the streaming version
+        try {
+          getIO().to(channelId).emit('message_finalized', {
+            messageId,
+            content: finalContent,
+            agentId,
+          });
+        } catch (_) {}
+
+        createdMessages.push(placeholder);
+
+        // Small gap between agents
+        const delay = 300 + Math.floor(Math.random() * 400);
+        await new Promise(resolve => setTimeout(resolve, delay));
 
       } catch (err) {
-        // Always clear typing on error
         try {
           getIO().to(channelId).emit('agent_typing', { agentId, isTyping: false });
         } catch (_) {}

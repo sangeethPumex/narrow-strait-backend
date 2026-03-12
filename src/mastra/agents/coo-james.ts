@@ -10,8 +10,8 @@ function buildOllamaModel() {
   const ollamaProvider = createOllama({ baseURL: `${baseUrl}/api` });
   return ollamaProvider(modelName, {
     numCtx: 1024,
-    numPredict: 150,
-    temperature: 0.7,
+    numPredict: 120,
+    temperature: 0.75,
     repeatPenalty: 1.1
   } as any);
 }
