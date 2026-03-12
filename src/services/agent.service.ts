@@ -10,6 +10,10 @@ import {
 } from '../mastra/workflows/conversational-discussion.js';
 import { summaryService } from './summary.service.js';
 import { getIO } from '../socket/io.js';
+import {
+  retrieveChannelMemory,
+  retrieveProgressEvents,
+} from '../mastra/rag/index.js';
 
 export const agentService = {
   async triggerDiscussion(
@@ -29,25 +33,33 @@ export const agentService = {
         .map(m => m.id)
         .filter(id => getAgentConfig(id));
 
-    const { summaries } = await summaryService.getChannelContext(channelId);
-    const recentMessages = await messageService.getChannelMessagesLean(channelId, 20);
+    const recentMessages = await messageService.getChannelMessagesLean(channelId, 8);
 
-    const recentContext = recentMessages
+    const contextMessages = recentMessages
+      .filter(m => m.content !== scenario.description)
+      .slice(0, 6);
+
+    const recentContext = contextMessages
       .map(m => `${m.authorName}: ${m.content}`)
       .join('\n');
 
-    const summaryContext =
-      summaries.length > 0
-        ? summaries
-            .map((s: { date: Date; summary: string }) =>
-              `[${new Date(s.date).toDateString()}] ${s.summary}`
-            )
-            .join('\n')
-        : '';
+    const ragMemory = await retrieveChannelMemory(channelId, scenario.description, 2)
+      .catch(() => []);
+    const ragProgress = await retrieveProgressEvents(scenario.description, 3)
+      .catch(() => []);
 
-    const context = summaryContext
-      ? `## Historical Context (summarized)\n${summaryContext}\n\n## Live Messages\n${recentContext}`
-      : recentContext;
+    const ragContext = [
+      ragMemory.length > 0
+        ? `## Past sessions (relevant)\n${ragMemory.join('\n---\n')}`
+        : '',
+      ragProgress.length > 0
+        ? `## Recent company events\n${ragProgress.join('\n')}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const context = [ragContext, recentContext].filter(Boolean).join('\n\n---\n\n');
 
     const companyState = await companyStateCRUD.getOrCreateDefault();
 

@@ -6,6 +6,7 @@ import app from './app.js';
 import { channelService } from './services/channel.service.js';
 import { setIO } from './socket/io.js';
 import { registerSocketHandlers } from './socket/socket.handler.js';
+import { initRAGIndexes } from './mastra/rag/index.js';
 
 const PORT = process.env.PORT || 3001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/simco-slack';
@@ -135,6 +136,7 @@ async function checkModels() {
 
 async function startServer() {
   await connectDB();
+  await initRAGIndexes();
   await checkModels();
   await initializeChannels();
 

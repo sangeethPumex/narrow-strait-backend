@@ -1,5 +1,6 @@
 import { channelModalCRUD, dailySummaryCRUD, messageModalCRUD } from '../modals/index.js';
 import { embedWithOllama } from '../utils/vector.utils.js';
+import { storeChannelMemory } from '../mastra/rag/index.js';
 
 type SummarizationStatus = {
   canSummarize: boolean;
@@ -123,6 +124,14 @@ export const summaryService = {
         agentsInvolved,
         embedding
       });
+
+      storeChannelMemory({
+        channelId,
+        sessionDate: dayStartIso,
+        summary: summaryText.slice(0, 1000),
+        keyDecisions: keyPoints,
+        agentsInvolved,
+      }).catch(err => console.warn('RAG channel memory store failed:', err.message));
 
       summarizedCount += dayMessages.length;
       for (const message of dayMessages) {

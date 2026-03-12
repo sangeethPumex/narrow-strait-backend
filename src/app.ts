@@ -7,6 +7,8 @@ import { channelController } from './controllers/channel.controller.js';
 import { agentController } from './controllers/agent.controller.js';
 import { vectorController } from './controllers/vector.controller.js';
 import { summaryController } from './controllers/summary.controller.js';
+import { progressController } from './controllers/progress.controller.js';
+import { documentController } from './controllers/document.controller.js';
 import {
   generalLimiter,
   agentLimiter,
@@ -83,6 +85,10 @@ app.post(
 // Summaries
 app.post('/api/channels/:channelId/summarize', summaryController.summarizeChannel);
 app.get('/api/channels/:channelId/context', summaryController.getChannelContext);
+
+// RAG ingest endpoints
+app.post('/api/progress', progressController.recordProgress);
+app.post('/api/documents', documentController.ingest);
 
 // Health
 app.get('/api/health', async (_req: Request, res: Response) => {
