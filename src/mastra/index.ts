@@ -47,16 +47,20 @@ export async function streamAgentResponse(
 ): Promise<string> {
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
   const model = process.env.OLLAMA_MODEL || 'hermes3:8b';
+  const agentInstance = getAgentInstance(agentId);
+  const systemPrompt = agentInstance?.instructions ?? '';
 
   const response = await fetch(`${baseUrl}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model,
+      system: systemPrompt,
       prompt,
       stream: true,
       options: {
-        num_predict: 120,
+        num_ctx: 8192,
+        num_predict: 300,
         temperature: 0.75,
         repeat_penalty: 1.1,
       },
